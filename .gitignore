@@ -2,3 +2,4 @@
 *_bootstrapper.sh
 .idea/*
 .orig
+spec/examples.txt

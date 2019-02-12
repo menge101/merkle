@@ -1,0 +1,8 @@
+Metrics/LineLength:
+  Max: 120
+
+Metrics/BlockLength:
+  ExcludedMethods: [describe, context, before, Before, after, After, namespace]
+
+Style/NumericLiterals:
+  Enabled: False
