@@ -15,13 +15,16 @@ require 'ruby-xxhash'
 class MerkleTree
   attr_reader :root, :leaves
 
+  DEFAULT_HASH_METHOD = XXhash.method(:xxh64)
+
   # Constructor
   # @param [Array] leaves Takes an optional Array of values to add to the tree
   # @return [Integer, nil] Returns the value of the root node
-  def initialize(leaves = [])
+  def initialize(leaves = [], hash_method: DEFAULT_HASH_METHOD)
     @leaves = leaves
     @history = {}
     @partners = {}
+    @hash_method = hash_method
     @root = build(@leaves)
   end
 
@@ -71,7 +74,7 @@ class MerkleTree
   # @return [Integer] Returns a hashed value
   def create_hash(value)
     value = value.to_s unless value.respond_to?(:downcase)
-    key = self.class.create_hash(value)
+    key = self.class.create_hash(value, hash_method: @hash_method)
     @history[value] = key
   end
 
@@ -84,12 +87,15 @@ class MerkleTree
     create_hash(self.class.parent_hash_string(parents))
   end
 
-  def self.create_hash(value)
-    XXhash.xxh64(value.to_s)
+  # This method handles the actual hashing of values
+  # @param [#to_s] value A value to hash
+  # @param [#call] hash_method A method to use to create a hash
+  def self.create_hash(value, hash_method: DEFAULT_HASH_METHOD)
+    hash_method.call(value.to_s)
   end
 
-  def self.hash_parents(*parents)
-    create_hash(parent_hash_string(parents))
+  def self.hash_parents(*parents, hash_method: DEFAULT_HASH_METHOD)
+    create_hash(parent_hash_string(parents), hash_method: hash_method)
   end
 
   def self.parent_hash_string(*parents)
@@ -101,7 +107,9 @@ class MerkleTree
   # @param [Array] path An array of complementary hash values that should lead to the root node
   # @param [#to_s] root Root value to verify inclusion of the value param along the given path
   # @return [true, false] Returns a boolean value true for value is part of root, false for not
-  def self.verify(value, path, root)
-    root == path.reduce(create_hash(value)) { |acc, node| hash_parents(acc, node) }
+  def self.verify(value, path, root, hash_method: DEFAULT_HASH_METHOD)
+    root == path.reduce(create_hash(value, hash_method: hash_method)) do |acc, node|
+      hash_parents(acc, node, hash_method: hash_method)
+    end
   end
 end
